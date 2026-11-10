@@ -8,7 +8,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:label="TG WS Proxy 1.11.4"
+        android:label="TGWS DLC Proxy"
+        android:icon="@drawable/ic_app"
+        android:roundIcon="@drawable/ic_app"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -18,6 +20,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".SettingsActivity" android:exported="false" />
         <service
             android:name=".ProxyService"
             android:exported="false"

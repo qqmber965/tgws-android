@@ -50,5 +50,10 @@ final class Settings {
         return "tg://proxy?server=127.0.0.1&port=" + port(context) + "&secret=dd" + secret(context);
     }
 
+    static String httpsLink(Context context) {
+        return "https://t.me/proxy?server=127.0.0.1&port=" + port(context) +
+                "&secret=dd" + secret(context);
+    }
+
     private Settings() {}
 }
