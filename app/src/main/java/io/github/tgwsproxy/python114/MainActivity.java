@@ -6,34 +6,29 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.regex.Pattern;
 
+/** Minimal home screen: power, apply to Telegram, and a settings entry in the toolbar. */
 public final class MainActivity extends Activity {
     private TextView status;
-    private EditText secret, port, pool, domains, dc2, dc4;
-    private CheckBox cf, h2;
-    private Button start, stop;
-    private final Handler handler = new Handler(Looper.getMainLooper());
+    private Button power, apply;
     private boolean resumed;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
-    private int dp(int n) { return (int) (n * getResources().getDisplayMetrics().density + 0.5f); }
+    private int dp(float value) { return AppUi.dp(this, value); }
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -45,157 +40,146 @@ public final class MainActivity extends Activity {
         }
         if (Build.VERSION.SDK_INT >= 33 &&
                 checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                        android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4);
         }
+        FrameLayout root = AppUi.canvas(this);
         ScrollView scroll = new ScrollView(this);
-        LinearLayout body = new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(20), dp(16), dp(20), dp(32));
-        scroll.addView(body);
-        setContentView(scroll);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.setVerticalScrollBarEnabled(false);
+        root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), dp(16), dp(20), dp(22));
+        scroll.addView(content);
 
-        TextView heading = label("TG WS Proxy 1.11.4", 23);
-        heading.setTextColor(Color.rgb(20, 50, 90));
-        body.addView(heading);
-        body.addView(label("Оригинальное ядро Flowseal (Python 1.11.4)\n" +
-                "Локальный адрес: 127.0.0.1; не нужен VPN или root.", 14));
-        status = label("", 16);
-        status.setTextColor(Color.rgb(0, 105, 90));
-        body.addView(status);
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.TOP | Gravity.CENTER_VERTICAL);
+        content.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(104)));
 
-        body.addView(label("Секрет MTProto (32 hex)", 14));
-        secret = field(body, Settings.secret(this), false);
-        Button regen = button(body, "Новый случайный секрет", () -> secret.setText(Settings.generateSecret()));
-        regen.setTextSize(13);
+        TextView title = AppUi.text(this, "TGWS\nDLC Proxy", 30, AppUi.PURPLE, true);
+        title.setLineSpacing(-dp(3), 1f);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.addView(title, new LinearLayout.LayoutParams(0, -1, 1f));
 
-        body.addView(label("Локальный порт", 14));
-        port = field(body, Integer.toString(Settings.port(this)), true);
-        body.addView(label("Прямые WebSocket-соединения на DC (0 = выключить)", 14));
-        pool = field(body, Integer.toString(Settings.pool(this)), true);
+        TextView gear = AppUi.text(this, "⚙", 32, AppUi.BLUE, false);
+        gear.setGravity(Gravity.CENTER);
+        gear.setContentDescription("Открыть настройки");
+        gear.setBackground(AppUi.fill(0xE1E9FF, 18, this));
+        LinearLayout.LayoutParams gearLp = new LinearLayout.LayoutParams(dp(58), dp(58));
+        gearLp.topMargin = dp(12);
+        toolbar.addView(gear, gearLp);
+        gear.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
 
-        cf = new CheckBox(this);
-        cf.setText("Резервный маршрут через Cloudflare");
-        cf.setChecked(Settings.cf(this));
-        body.addView(cf);
-        h2 = new CheckBox(this);
-        h2.setText("HTTP/2 для медиа через Cloudflare (как на ПК)");
-        h2.setChecked(Settings.h2(this));
-        body.addView(h2);
+        View before = new View(this);
+        content.addView(before, new LinearLayout.LayoutParams(1, 0, 0.85f));
 
-        body.addView(label("Cloudflare-домены (необязательно; через запятую)", 14));
-        domains = field(body, Settings.domains(this), false);
-        body.addView(label("IP перенаправления для DC2", 14));
-        dc2 = field(body, Settings.dc2(this), false);
-        body.addView(label("IP перенаправления для DC4", 14));
-        dc4 = field(body, Settings.dc4(this), false);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(24), dp(29), dp(24), dp(28));
+        card.setBackground(AppUi.outline(AppUi.CARD, 0xDCE4F6, 30, this));
+        card.setElevation(dp(9));
+        content.addView(card, new LinearLayout.LayoutParams(-1, -2));
 
-        start = button(body, "Сохранить и запустить", this::startProxy);
-        stop = button(body, "Остановить", () -> {
-            Intent intent = new Intent(this, ProxyService.class).setAction(ProxyService.STOP);
-            startService(intent);
-            status.setText("Состояние: " + Settings.STOPPING);
-        });
-        button(body, "Открыть прокси в Telegram", () -> {
-            String link = Settings.link(this);
-            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(link))); }
-            catch (Exception e) {
-                copyLink(link);
-                Toast.makeText(this, "Нет обработчика tg://. Ссылка скопирована.", Toast.LENGTH_LONG).show();
-            }
-        });
-        button(body, "Копировать ссылку прокси", () -> copyLink(Settings.link(this)));
-        body.addView(label("Важно: сначала запустите прокси. Для работы в мобильной сети " +
-                "включите Cloudflare. При смене Wi-Fi/мобильной сети попробуйте перезапуск. " +
-                "Если система останавливает службу, отключите для приложения оптимизацию батареи.", 13));
+        AppUi.TelegramMark mark = new AppUi.TelegramMark(this);
+        card.addView(mark, new LinearLayout.LayoutParams(dp(162), dp(162)));
+
+        status = AppUi.text(this, "Отключено", 20, AppUi.TEXT, true);
+        status.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams stateLp = new LinearLayout.LayoutParams(-1, dp(60));
+        stateLp.topMargin = dp(12);
+        stateLp.bottomMargin = dp(3);
+        card.addView(status, stateLp);
+
+        power = AppUi.button(this, "Включить прокси", AppUi.BLUE, 0xFFFFFFFF);
+        LinearLayout.LayoutParams powerLp = new LinearLayout.LayoutParams(-1, dp(60));
+        card.addView(power, powerLp);
+        power.setOnClickListener(v -> toggleProxy());
+
+        apply = AppUi.button(this, "Применить в Telegram", AppUi.SOFT_BLUE, AppUi.TEXT);
+        LinearLayout.LayoutParams applyLp = new LinearLayout.LayoutParams(-1, dp(60));
+        applyLp.topMargin = dp(12);
+        card.addView(apply, applyLp);
+        apply.setOnClickListener(v -> openTelegram());
+
+        TextView caption = AppUi.text(this, "Локальный MTProto-прокси", 12, AppUi.SECONDARY, false);
+        caption.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams captionLp = new LinearLayout.LayoutParams(-1, -2);
+        captionLp.topMargin = dp(21);
+        card.addView(caption, captionLp);
+
+        View after = new View(this);
+        content.addView(after, new LinearLayout.LayoutParams(1, 0, 1.15f));
+        setContentView(root);
         refresh();
     }
 
-    private TextView label(String value, int sp) {
-        TextView v = new TextView(this);
-        v.setText(value);
-        v.setTextSize(sp);
-        v.setPadding(0, dp(6), 0, dp(6));
-        return v;
-    }
-    private EditText field(LinearLayout parent, String value, boolean numeric) {
-        EditText edit = new EditText(this);
-        edit.setSingleLine(true);
-        if (numeric) edit.setInputType(InputType.TYPE_CLASS_NUMBER);
-        edit.setText(value);
-        edit.setTextSize(16);
-        parent.addView(edit, new LinearLayout.LayoutParams(-1, dp(48)));
-        return edit;
-    }
-    private Button button(LinearLayout parent, String text, Runnable action) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setAllCaps(false);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(51));
-        lp.topMargin = dp(8);
-        parent.addView(b, lp);
-        b.setOnClickListener(v -> action.run());
-        return b;
-    }
-    private void copyLink(String value) {
-        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("Telegram MTProto proxy", value));
-        Toast.makeText(this, "Ссылка скопирована", Toast.LENGTH_SHORT).show();
-    }
-    private void startProxy() {
-        try {
-            String key = secret.getText().toString().trim();
-            if (!Pattern.matches("(?i)[a-f0-9]{32}", key))
-                throw new IllegalArgumentException("Секрет должен состоять из 32 шестнадцатеричных символов");
-            int pn = Integer.parseInt(port.getText().toString().trim());
-            int n = Integer.parseInt(pool.getText().toString().trim());
-            if (pn < 1024 || pn > 65535) throw new IllegalArgumentException("Порт: 1024–65535");
-            if (n < 0 || n > 32) throw new IllegalArgumentException("Пул: 0–32");
-            String a = dc2.getText().toString().trim();
-            String b = dc4.getText().toString().trim();
-            if (!ipv4(a) || !ipv4(b)) throw new IllegalArgumentException("Проверьте IPv4-адреса DC2 и DC4");
-            if (Settings.RUNNING.equals(Settings.status(this)) ||
-                    Settings.STARTING.equals(Settings.status(this)) ||
-                    Settings.STOPPING.equals(Settings.status(this)))
-                throw new IllegalArgumentException("Сначала остановите запущенный прокси");
-            SharedPreferences.Editor editor = Settings.of(this).edit();
-            editor.putString("secret", key.toLowerCase())
-                    .putInt("port", pn).putInt("pool", n)
-                    .putBoolean("cf", cf.isChecked()).putBoolean("h2", h2.isChecked())
-                    .putString("domains", domains.getText().toString().trim())
-                    .putString("dc2", a).putString("dc4", b);
-            if (!editor.commit()) throw new IllegalStateException("Не удалось записать настройки");
-            Settings.status(this, Settings.STARTING);
-            Intent intent = new Intent(this, ProxyService.class).setAction(ProxyService.START);
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
-            else startService(intent);
-            refresh();
-        } catch (Exception ex) {
-            Toast.makeText(this, ex.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-    private boolean ipv4(String s) {
-        String[] parts = s.split("\\.", -1);
-        if (parts.length != 4) return false;
-        for (String p : parts) {
-            try {
-                if (p.isEmpty() || p.length() > 3 || Integer.parseInt(p) > 255 || Integer.parseInt(p) < 0)
-                    return false;
-            } catch (NumberFormatException e) { return false; }
-        }
-        return true;
-    }
-    private void refresh() {
+    private void toggleProxy() {
         String s = Settings.status(this);
-        status.setText("Состояние: " + s);
-        boolean active = Settings.RUNNING.equals(s) || Settings.STARTING.equals(s) ||
-                Settings.STOPPING.equals(s);
-        start.setEnabled(!active);
-        stop.setEnabled(active && !Settings.STOPPING.equals(s));
+        if (Settings.RUNNING.equals(s) || Settings.STARTING.equals(s)) {
+            Settings.status(this, Settings.STOPPING);
+            startService(new Intent(this, ProxyService.class).setAction(ProxyService.STOP));
+        } else if (Settings.STOPPING.equals(s)) {
+            return;
+        } else {
+            Settings.status(this, Settings.STARTING);
+            try {
+                Intent intent = new Intent(this, ProxyService.class).setAction(ProxyService.START);
+                if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent);
+                else startService(intent);
+            } catch (Exception ex) {
+                Settings.status(this, "Ошибка запуска: " + ex.getMessage());
+                Toast.makeText(this, "Не удалось запустить прокси", Toast.LENGTH_LONG).show();
+            }
+        }
+        refresh();
     }
+
+    private void openTelegram() {
+        if (!Settings.RUNNING.equals(Settings.status(this))) return;
+        // Prefer Telegram's MTProto URI. If it has no handler, provide the HTTPS fallback.
+        String tgLink = Settings.link(this);
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(tgLink));
+            startActivity(intent);
+        } catch (Exception ex) {
+            String https = Settings.httpsLink(this);
+            try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(https))); }
+            catch (Exception second) {
+                ClipboardManager manager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                manager.setPrimaryClip(ClipData.newPlainText("Telegram proxy", https));
+                Toast.makeText(this, "Ссылка скопирована", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void refresh() {
+        if (status == null) return;
+        String s = Settings.status(this);
+        boolean running = Settings.RUNNING.equals(s);
+        boolean starting = Settings.STARTING.equals(s);
+        boolean stopping = Settings.STOPPING.equals(s);
+        if (running) status.setText("Прокси работает");
+        else if (starting) status.setText("Запуск…");
+        else if (stopping) status.setText("Остановка…");
+        else if (Settings.STOPPED.equals(s)) status.setText("Отключено");
+        else status.setText(s); // Show the error reported by the existing service.
+        status.setTextColor(running ? AppUi.BLUE : (starting || stopping ? AppUi.SECONDARY : AppUi.TEXT));
+        power.setText(running || starting ? "Выключить прокси" : "Включить прокси");
+        power.setEnabled(!stopping);
+        apply.setEnabled(running);
+        apply.setAlpha(running ? 1f : 0.50f);
+    }
+
     private final Runnable refreshTask = new Runnable() {
         @Override public void run() {
-            if (resumed) { refresh(); handler.postDelayed(this, 1000); }
+            if (resumed) {
+                refresh();
+                handler.postDelayed(this, 1000);
+            }
         }
     };
     @Override protected void onResume() {

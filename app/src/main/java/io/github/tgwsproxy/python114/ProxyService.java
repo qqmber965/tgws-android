@@ -43,7 +43,7 @@ public final class ProxyService extends Service {
         try {
             showForegroundNotification();
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TGWSProxy114:localProxy");
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TGWSDLCProxy:localProxy");
             wakeLock.setReferenceCounted(false);
             wakeLock.acquire();
         } catch (Exception ex) {
@@ -87,7 +87,7 @@ public final class ProxyService extends Service {
                 }
             } catch (Exception ex) {
                 failure = true;
-                android.util.Log.e("TGWSProxy114", "Python proxy failed", ex);
+                android.util.Log.e("TGWSDLCProxy", "Python proxy failed", ex);
                 if (!stopRequested) {
                     String message = ex.getMessage();
                     Settings.status(this, "Ошибка ядра: " +
@@ -109,7 +109,7 @@ public final class ProxyService extends Service {
         if (module != null) {
             Thread thread = new Thread(() -> {
                 try { module.callAttr("stop"); }
-                catch (Exception ex) { android.util.Log.e("TGWSProxy114", "Stop failed", ex); }
+                catch (Exception ex) { android.util.Log.e("TGWSDLCProxy", "Stop failed", ex); }
             }, "Proxy-stop");
             thread.setDaemon(true);
             thread.start();
@@ -128,7 +128,7 @@ public final class ProxyService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_upload_done)
-                .setContentTitle("TG WS Proxy 1.11.4")
+                .setContentTitle("TGWS DLC Proxy")
                 .setContentText("Локальный прокси 127.0.0.1 – порт " + Settings.port(this))
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
