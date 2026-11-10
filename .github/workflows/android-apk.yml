@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Android platform
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Gradle 8.12.1
