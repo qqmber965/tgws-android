@@ -19,8 +19,26 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+    // The signing key is supplied only during the manually triggered release workflow.
+    // Do not place key files or passwords into the repository.
+    signingConfigs {
+        signedRelease {
+            def signingStore = System.getenv('TGWS_SIGNING_KEYSTORE_FILE')
+            if (signingStore) {
+                storeFile file(signingStore)
+                storePassword System.getenv('TGWS_SIGNING_STORE_PASSWORD')
+                keyAlias System.getenv('TGWS_SIGNING_KEY_ALIAS')
+                keyPassword System.getenv('TGWS_SIGNING_KEY_PASSWORD')
+            }
+        }
+    }
     buildTypes {
-        release { minifyEnabled false }
+        release {
+            minifyEnabled false
+            if (System.getenv('TGWS_SIGNING_KEYSTORE_FILE')) {
+                signingConfig signingConfigs.signedRelease
+            }
+        }
     }
 }
 

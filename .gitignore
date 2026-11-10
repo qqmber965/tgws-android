@@ -6,3 +6,7 @@ local.properties
 *.apk
 *.aab
 app/*.jks
+
+# Private release signing keys (never commit)
+*.jks
+*.keystore

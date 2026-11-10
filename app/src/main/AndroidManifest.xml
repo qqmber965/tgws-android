@@ -9,8 +9,8 @@
 
     <application
         android:label="TGWS DLC Proxy"
-        android:icon="@drawable/ic_app"
-        android:roundIcon="@drawable/ic_app"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
