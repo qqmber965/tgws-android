@@ -17,7 +17,8 @@ def reset():
         _stop_requested = False
 
 
-def start(secret, port, pool_size, cf_enabled, h2_enabled, cf_domains, dc2, dc4):
+def start(secret, port, pool_size, cf_enabled, h2_enabled, cf_domains, dc2, dc4,
+          worker_enabled=False, worker_domain=""):
     """Blocking entry point: invoke only on a background Java thread."""
     if len(secret) != 32 or any(c not in '0123456789abcdefABCDEF' for c in secret):
         raise ValueError('Secret must contain exactly 32 hexadecimal characters')
@@ -39,7 +40,12 @@ def start(secret, port, pool_size, cf_enabled, h2_enabled, cf_domains, dc2, dc4)
     proxy_config.proxy_protocol = False
     proxy_config.force_test_dc = False
     proxy_config.buffer_size = 256 * 1024
-    proxy_config.cfproxy_worker_domains = []
+    # Worker fallback operates separately from the ordinary CF proxy and H2.
+    # Preserve the original 8-argument call for existing adapter tests.
+    worker_domains = coerce_domain_list(worker_domain) if worker_enabled else []
+    if worker_enabled and len(worker_domains) != 1:
+        raise ValueError('Exactly one Cloudflare Worker domain is required')
+    proxy_config.cfproxy_worker_domains = worker_domains
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 

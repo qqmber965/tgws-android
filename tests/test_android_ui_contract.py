@@ -15,8 +15,8 @@ def test_brand_and_version():
     assert app.get(android + 'label') == 'TGWS DLC Proxy'
     assert any(x.get(android + 'name') == '.SettingsActivity' for x in app.findall('activity'))
     gradle = (ROOT / 'app/build.gradle').read_text()
-    assert "versionName '1.0'" in gradle
-    assert 'versionCode 2' in gradle
+    assert "versionName '1.1'" in gradle
+    assert 'versionCode 3' in gradle
     assert "applicationId 'io.github.tgwsproxy.python114'" in gradle
     settings_gradle = (ROOT / 'settings.gradle').read_text()
     assert "rootProject.name = 'tgws-dlcproxy'" in settings_gradle
@@ -38,6 +38,12 @@ def test_settings_keep_engine_arguments():
         assert f'"{key}"' in src or f'Settings.{key}(this)' in src
     assert 'Settings.RUNNING.equals(state)' in src
     assert 'Settings.httpsLink(this)' in src
+    assert '"worker_enabled"' in src and '"worker_domain"' in src
+    assert 'workerEnabled.isChecked()' in src
+    runner = (ROOT / 'app/src/main/python/mobile_runner.py').read_text()
+    service = (JAVA / 'ProxyService.java').read_text()
+    assert 'proxy_config.cfproxy_worker_domains = worker_domains' in runner
+    assert 'Settings.workerEnabled(this), Settings.workerDomain(this)' in service
 
 
 def test_build_workflow_updated():

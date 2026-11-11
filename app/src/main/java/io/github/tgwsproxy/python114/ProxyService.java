@@ -80,7 +80,8 @@ public final class ProxyService extends Service {
                 module.callAttr("start",
                         Settings.secret(this), Settings.port(this), Settings.pool(this),
                         Settings.cf(this), Settings.h2(this), Settings.domains(this),
-                        Settings.dc2(this), Settings.dc4(this));
+                        Settings.dc2(this), Settings.dc4(this),
+                        Settings.workerEnabled(this), Settings.workerDomain(this));
                 if (!stopRequested) {
                     failure = true;
                     Settings.status(this, "Прокси завершился без команды остановки");

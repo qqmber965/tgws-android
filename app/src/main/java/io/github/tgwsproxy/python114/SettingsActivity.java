@@ -21,8 +21,8 @@ import java.util.regex.Pattern;
 
 /** All engine options moved off the home screen. Does not change the Python core. */
 public final class SettingsActivity extends Activity {
-    private EditText secret, port, pool, domains, dc2, dc4;
-    private CheckBox cf, h2;
+    private EditText secret, port, pool, domains, workerDomain, dc2, dc4;
+    private CheckBox cf, h2, workerEnabled;
     private int dp(float n) { return AppUi.dp(this, n); }
 
     @Override public void onCreate(Bundle state) {
@@ -71,6 +71,17 @@ public final class SettingsActivity extends Activity {
         cf = check(card, "Резервный маршрут через Cloudflare", Settings.cf(this));
         h2 = check(card, "HTTP/2 для медиа через Cloudflare", Settings.h2(this));
         domains = field(card, "Cloudflare-домены (через запятую)", Settings.domains(this), false);
+        section(card, "Собственный Cloudflare Worker");
+        workerEnabled = check(card, "Использовать Cloudflare Worker", Settings.workerEnabled(this));
+        workerDomain = field(card, "Домен Worker (без https:// и пути)", Settings.workerDomain(this), false);
+        TextView workerHelp = AppUi.text(this,
+                "Для Yota: включите Worker, укажите tgws.dlcpromo.ru, установите пул 0, " +
+                "отключите обычный Cloudflare и HTTP/2. На других сетях можно оставить прежние настройки.",
+                13, AppUi.SECONDARY, false);
+        workerHelp.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams workerHelpLp = new LinearLayout.LayoutParams(-1, -2);
+        workerHelpLp.topMargin = dp(9);
+        card.addView(workerHelp, workerHelpLp);
         dc2 = field(card, "IP перенаправления DC2", Settings.dc2(this), false);
         dc4 = field(card, "IP перенаправления DC4", Settings.dc4(this), false);
 
@@ -160,11 +171,18 @@ public final class SettingsActivity extends Activity {
             String b = dc4.getText().toString().trim();
             if (!validIPv4(a) || !validIPv4(b))
                 throw new IllegalArgumentException("Проверьте IPv4-адреса DC2 и DC4");
+            String workerHost = workerDomain.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            if (workerEnabled.isChecked() && !validDomain(workerHost))
+                throw new IllegalArgumentException("Укажите домен Worker без https:// и пути");
+            if (!workerHost.isEmpty() && !validDomain(workerHost))
+                throw new IllegalArgumentException("Некорректное доменное имя Worker");
             SharedPreferences.Editor e = Settings.of(this).edit();
             e.putString("secret", key.toLowerCase(java.util.Locale.ROOT));
             e.putInt("port", pn).putInt("pool", n);
             e.putBoolean("cf", cf.isChecked()).putBoolean("h2", h2.isChecked());
             e.putString("domains", domains.getText().toString().trim());
+            e.putBoolean("worker_enabled", workerEnabled.isChecked());
+            e.putString("worker_domain", workerHost);
             e.putString("dc2", a).putString("dc4", b);
             if (!e.commit()) throw new IllegalStateException("Не удалось записать настройки");
             Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show();
@@ -174,6 +192,18 @@ public final class SettingsActivity extends Activity {
         } catch (Exception ex) {
             Toast.makeText(this, ex.getMessage(), Toast.LENGTH_LONG).show();
         }
+    }
+
+    private static boolean validDomain(String host) {
+        if (host.length() > 253 || host.isEmpty()) return false;
+        if (host.contains("..") || host.startsWith(".") || host.endsWith(".")) return false;
+        String[] labels = host.split("\\.", -1);
+        if (labels.length < 2) return false;
+        for (String label : labels) {
+            if (label.length() < 1 || label.length() > 63 ||
+                    !Pattern.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", label)) return false;
+        }
+        return true;
     }
 
     private static boolean validIPv4(String s) {

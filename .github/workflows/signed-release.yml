@@ -76,15 +76,15 @@ jobs:
           original="$apk_dir/app-release.apk"
           test -f "$original"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$original"
-          mv "$original" "$apk_dir/tgws-dlcproxy-v1.0-arm64.apk"
-          (cd "$apk_dir" && sha256sum tgws-dlcproxy-v1.0-arm64.apk > SHA256SUMS.txt)
+          mv "$original" "$apk_dir/tgws-dlcproxy-v1.1-arm64.apk"
+          (cd "$apk_dir" && sha256sum tgws-dlcproxy-v1.1-arm64.apk > SHA256SUMS.txt)
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: TGWS-DLC-Proxy-v1.0-signed-arm64
+          name: TGWS-DLC-Proxy-v1.1-signed-arm64
           path: |
-            app/build/outputs/apk/release/tgws-dlcproxy-v1.0-arm64.apk
+            app/build/outputs/apk/release/tgws-dlcproxy-v1.1-arm64.apk
             app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90

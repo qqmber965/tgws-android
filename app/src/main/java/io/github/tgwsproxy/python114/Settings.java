@@ -41,6 +41,8 @@ final class Settings {
     static int pool(Context context) { return of(context).getInt("pool", 4); }
     static boolean cf(Context context) { return of(context).getBoolean("cf", true); }
     static boolean h2(Context context) { return of(context).getBoolean("h2", true); }
+    static boolean workerEnabled(Context context) { return of(context).getBoolean("worker_enabled", false); }
+    static String workerDomain(Context context) { return of(context).getString("worker_domain", "tgws.dlcpromo.ru"); }
     static String domains(Context context) { return of(context).getString("domains", ""); }
     static String dc2(Context context) { return of(context).getString("dc2", "149.154.167.220"); }
     static String dc4(Context context) { return of(context).getString("dc4", "149.154.167.220"); }
