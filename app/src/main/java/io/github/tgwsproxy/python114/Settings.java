@@ -7,6 +7,7 @@ import java.security.SecureRandom;
 final class Settings {
     static final String STORE = "tg_ws_proxy_114";
     static final String STATUS = "runtime_status";
+    static final String PROBE = "telegram_probe_status";
     static final String STOPPED = "Остановлен";
     static final String STARTING = "Запускается…";
     static final String STOPPING = "Останавливается…";
@@ -48,6 +49,8 @@ final class Settings {
     static String dc4(Context context) { return of(context).getString("dc4", "149.154.167.220"); }
     static String status(Context context) { return of(context).getString(STATUS, STOPPED); }
     static void status(Context context, String value) { of(context).edit().putString(STATUS, value).apply(); }
+    static String probe(Context context) { return of(context).getString(PROBE, ""); }
+    static void probe(Context context, String value) { of(context).edit().putString(PROBE, value).apply(); }
     static String link(Context context) {
         return "tg://proxy?server=127.0.0.1&port=" + port(context) + "&secret=dd" + secret(context);
     }

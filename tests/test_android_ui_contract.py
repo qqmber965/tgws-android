@@ -15,8 +15,8 @@ def test_brand_and_version():
     assert app.get(android + 'label') == 'TGWS DLC Proxy'
     assert any(x.get(android + 'name') == '.SettingsActivity' for x in app.findall('activity'))
     gradle = (ROOT / 'app/build.gradle').read_text()
-    assert "versionName '1.1'" in gradle
-    assert 'versionCode 3' in gradle
+    assert "versionName '1.2'" in gradle
+    assert 'versionCode 4' in gradle
     assert "applicationId 'io.github.tgwsproxy.python114'" in gradle
     settings_gradle = (ROOT / 'settings.gradle').read_text()
     assert "rootProject.name = 'tgws-dlcproxy'" in settings_gradle

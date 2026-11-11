@@ -6,6 +6,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.content.Intent;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -94,7 +95,7 @@ public final class SettingsActivity extends Activity {
             Toast.makeText(this, "Ссылка скопирована", Toast.LENGTH_SHORT).show();
         });
         TextView help = AppUi.text(this,
-                "Для изменения настроек сначала выключите прокси. Они будут использованы при следующем запуске. " +
+                "При сохранении работающий прокси автоматически перезапускается с новыми параметрами. " +
                 "После смены порта или секрета повторно примените прокси в Telegram.",
                 13, AppUi.SECONDARY, false);
         help.setLineSpacing(dp(3), 1f);
@@ -156,10 +157,6 @@ public final class SettingsActivity extends Activity {
     private void save() {
         try {
             String state = Settings.status(this);
-            if (Settings.RUNNING.equals(state) || Settings.STARTING.equals(state) ||
-                    Settings.STOPPING.equals(state)) {
-                throw new IllegalArgumentException("Сначала выключите прокси на главном экране");
-            }
             String key = secret.getText().toString().trim();
             if (!Pattern.matches("(?i)[a-f0-9]{32}", key))
                 throw new IllegalArgumentException("Секрет: ровно 32 шестнадцатеричных символа");
@@ -185,7 +182,17 @@ public final class SettingsActivity extends Activity {
             e.putString("worker_domain", workerHost);
             e.putString("dc2", a).putString("dc4", b);
             if (!e.commit()) throw new IllegalStateException("Не удалось записать настройки");
-            Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show();
+            boolean shouldRestart = Settings.RUNNING.equals(state) || Settings.STARTING.equals(state);
+            if (shouldRestart) {
+                // The service owns a graceful stop -> new start transition.
+                // Avoid a separate immediate START, which would race with shutdown.
+                startService(new Intent(this, ProxyService.class).setAction(ProxyService.RESTART));
+                Toast.makeText(this, "Настройки сохранены. Перезапускаем прокси…", Toast.LENGTH_LONG).show();
+            } else if (Settings.STOPPING.equals(state)) {
+                Toast.makeText(this, "Настройки сохранены. Запустите прокси после остановки", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Настройки сохранены", Toast.LENGTH_SHORT).show();
+            }
             finish();
         } catch (NumberFormatException ex) {
             Toast.makeText(this, "Порт и пул должны быть целыми числами", Toast.LENGTH_LONG).show();

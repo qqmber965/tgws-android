@@ -136,9 +136,19 @@ final class AppUi {
     static final class TelegramMark extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
+        private boolean active;
         TelegramMark(Context ctx) {
             super(ctx);
-            setContentDescription("Telegram");
+            setContentDescription("Включить прокси");
+            setClickable(true);
+            setFocusable(true);
+        }
+        void setActive(boolean active) {
+            if (this.active != active) {
+                this.active = active;
+                invalidate();
+            }
+            setContentDescription(active ? "Выключить прокси" : "Включить прокси");
         }
         @Override protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
@@ -148,8 +158,13 @@ final class AppUi {
             int save = canvas.save();
             canvas.translate(x, y);
             canvas.scale(size / 100f, size / 100f);
-            paint.setShader(new LinearGradient(20, 0, 80, 100,
-                    Color.rgb(49, 190, 246), Color.rgb(1, 124, 195), Shader.TileMode.CLAMP));
+            if (active) {
+                paint.setShader(new LinearGradient(20, 0, 80, 100,
+                        Color.rgb(49, 190, 246), Color.rgb(1, 124, 195), Shader.TileMode.CLAMP));
+            } else {
+                paint.setShader(new LinearGradient(20, 0, 80, 100,
+                        Color.rgb(202, 206, 212), Color.rgb(160, 166, 177), Shader.TileMode.CLAMP));
+            }
             canvas.drawCircle(50, 50, 49, paint);
             paint.setShader(null);
             paint.setColor(Color.WHITE);
@@ -167,7 +182,7 @@ final class AppUi {
             path.quadTo(15, 50, 17, 47);
             path.close();
             canvas.drawPath(path, paint);
-            paint.setColor(Color.rgb(12, 142, 209));
+            paint.setColor(active ? Color.rgb(12, 142, 209) : Color.rgb(151, 157, 167));
             path.reset();
             path.moveTo(38, 58);
             path.lineTo(68, 35);

@@ -23,7 +23,8 @@ import android.widget.Toast;
 
 /** Minimal home screen: power, apply to Telegram, and a settings entry in the toolbar. */
 public final class MainActivity extends Activity {
-    private TextView status;
+    private TextView status, connectionStatus;
+    private AppUi.TelegramMark mark;
     private Button power, apply;
     private boolean resumed;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -59,8 +60,10 @@ public final class MainActivity extends Activity {
         toolbar.setGravity(Gravity.TOP | Gravity.CENTER_VERTICAL);
         content.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(104)));
 
-        TextView title = AppUi.text(this, "TGWS\nDLC Proxy", 30, AppUi.PURPLE, true);
-        title.setLineSpacing(-dp(3), 1f);
+        TextView title = AppUi.text(this, "TGWS\nDLC Proxy", 29, AppUi.BLUE, true);
+        title.setTypeface(android.graphics.Typeface.create("sans-serif-condensed", android.graphics.Typeface.BOLD));
+        title.setLetterSpacing(0.025f);
+        title.setLineSpacing(-dp(2), 1f);
         title.setGravity(Gravity.CENTER_VERTICAL);
         toolbar.addView(title, new LinearLayout.LayoutParams(0, -1, 1f));
 
@@ -84,7 +87,8 @@ public final class MainActivity extends Activity {
         card.setElevation(dp(9));
         content.addView(card, new LinearLayout.LayoutParams(-1, -2));
 
-        AppUi.TelegramMark mark = new AppUi.TelegramMark(this);
+        mark = new AppUi.TelegramMark(this);
+        mark.setOnClickListener(v -> toggleProxy());
         card.addView(mark, new LinearLayout.LayoutParams(dp(162), dp(162)));
 
         status = AppUi.text(this, "Отключено", 20, AppUi.TEXT, true);
@@ -93,6 +97,14 @@ public final class MainActivity extends Activity {
         stateLp.topMargin = dp(12);
         stateLp.bottomMargin = dp(3);
         card.addView(status, stateLp);
+
+        connectionStatus = AppUi.text(this, "Проверка соединения начнётся при включении", 13,
+                AppUi.SECONDARY, false);
+        connectionStatus.setGravity(Gravity.CENTER);
+        connectionStatus.setLineSpacing(dp(2), 1f);
+        LinearLayout.LayoutParams probeLp = new LinearLayout.LayoutParams(-1, -2);
+        probeLp.bottomMargin = dp(17);
+        card.addView(connectionStatus, probeLp);
 
         power = AppUi.button(this, "Включить прокси", AppUi.BLUE, 0xFFFFFFFF);
         LinearLayout.LayoutParams powerLp = new LinearLayout.LayoutParams(-1, dp(60));
@@ -168,6 +180,14 @@ public final class MainActivity extends Activity {
         else if (Settings.STOPPED.equals(s)) status.setText("Отключено");
         else status.setText(s); // Show the error reported by the existing service.
         status.setTextColor(running ? AppUi.BLUE : (starting || stopping ? AppUi.SECONDARY : AppUi.TEXT));
+        mark.setActive(running);
+        mark.setEnabled(!stopping);
+        String probe = Settings.probe(this);
+        connectionStatus.setText(running || starting ?
+                (probe.isEmpty() ? "Проверка соединения с Telegram…" : probe) :
+                "Проверка соединения начнётся при включении");
+        connectionStatus.setTextColor(running && probe.startsWith("Связь с Telegram подтверждена")
+                ? AppUi.BLUE : AppUi.SECONDARY);
         power.setText(running || starting ? "Выключить прокси" : "Включить прокси");
         power.setEnabled(!stopping);
         apply.setEnabled(running);

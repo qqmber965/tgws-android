@@ -61,6 +61,11 @@ jobs:
       - name: Android UI checks
         run: python tests/test_android_ui_contract.py
 
+      - name: Offline proxy and Telegram probe tests
+        run: |
+          python -m pip install --disable-pip-version-check certifi 'httpx[http2]==0.28.1' 'cryptography==42.0.8' pytest
+          python -m pytest -q tests
+
       - name: Build signed release APK
         env:
           TGWS_SIGNING_STORE_PASSWORD: ${{ secrets.TGWS_SIGNING_STORE_PASSWORD }}
@@ -76,15 +81,15 @@ jobs:
           original="$apk_dir/app-release.apk"
           test -f "$original"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$original"
-          mv "$original" "$apk_dir/tgws-dlcproxy-v1.1-arm64.apk"
-          (cd "$apk_dir" && sha256sum tgws-dlcproxy-v1.1-arm64.apk > SHA256SUMS.txt)
+          mv "$original" "$apk_dir/tgws-dlcproxy-v1.2-arm64.apk"
+          (cd "$apk_dir" && sha256sum tgws-dlcproxy-v1.2-arm64.apk > SHA256SUMS.txt)
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: TGWS-DLC-Proxy-v1.1-signed-arm64
+          name: TGWS-DLC-Proxy-v1.2-signed-arm64
           path: |
-            app/build/outputs/apk/release/tgws-dlcproxy-v1.1-arm64.apk
+            app/build/outputs/apk/release/tgws-dlcproxy-v1.2-arm64.apk
             app/build/outputs/apk/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
